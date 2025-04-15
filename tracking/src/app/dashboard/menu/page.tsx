@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-export default function Dashboard() {
+export default function DashboardMenu() {
   const [stats, setStats] = useState<{ category: string; count: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -30,6 +30,20 @@ export default function Dashboard() {
       .finally(() => setLoading(false));
   }, []);
 
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-zinc-800 text-white text-sm rounded-lg px-4 py-2 shadow-lg border border-zinc-700">
+          <p className="font-semibold">{label}</p>
+          <p>
+            <span className="text-zinc-400">Clics :</span> {payload[0].value}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="p-6 sm:p-10 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-5xl mx-auto mt-5">
       <div className="flex items-center justify-between mb-6">
@@ -43,27 +57,32 @@ export default function Dashboard() {
         )}
       </div>
 
-      {loading && (
+      {loading ? (
         <div className="text-center py-20 text-zinc-500 dark:text-zinc-300">
           Chargement des statistiques...
         </div>
-      )}
-
-      {error && (
+      ) : error ? (
         <div className="text-center py-20 text-red-500">
           ⚠️ {error}
         </div>
-      )}
-
-      {!loading && !error && stats.length > 0 && (
+      ) : stats.length > 0 ? (
         <>
-          <div className="mb-10 h-[400px]">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="mb-10">
+            <h2 className="text-lg font-semibold text-zinc-700 dark:text-white mb-2">
+              Clics par catégorie
+            </h2>
+            <ResponsiveContainer width="100%" height={300}>
               <BarChart data={stats}>
                 <XAxis dataKey="category" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="count" fill="#22c55e" radius={[8, 8, 0, 0]} />
+                <YAxis allowDecimals={false} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar
+                  dataKey="count"
+                  fill="#3b82f6"
+                  radius={[8, 8, 0, 0]}
+                  label={{ fill: '#ffffff', fontSize: 12 }}
+                  animationDuration={600}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -80,7 +99,7 @@ export default function Dashboard() {
                 {stats.map((item, index) => (
                   <tr
                     key={index}
-                    className="even:bg-zinc-50 dark:even:bg-zinc-800"
+                    className="even:bg-zinc-50 dark:even:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
                   >
                     <td className="px-4 py-3">{item.category}</td>
                     <td className="px-4 py-3 font-semibold">{item.count}</td>
@@ -90,9 +109,7 @@ export default function Dashboard() {
             </table>
           </div>
         </>
-      )}
-
-      {!loading && stats.length === 0 && !error && (
+      ) : (
         <div className="text-center py-20 text-zinc-500 dark:text-zinc-300">
           Aucune donnée à afficher pour le moment.
         </div>

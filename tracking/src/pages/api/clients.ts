@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   }
 
   const apiKey = process.env.PRESTA_API_KEY!;
-  const url = 'https://www.agricolors.fr/api/customers?display=[id,date_add,active]';
+  const url = 'https://www.agricolors.fr/api/customers?display=[id,date_add,active,firstname,lastname,id_gender]';
 
   try {
     const response = await fetch(url, {
@@ -19,25 +19,45 @@ export default async function handler(req, res) {
     const xml = await response.text();
     const json = await parseStringPromise(xml, { explicitArray: false });
 
-    const clients = Array.isArray(json.prestashop.customers.customer)
-      ? json.prestashop.customers.customer
-      : [json.prestashop.customers.customer];
+    const rawClients = json.prestashop.customers.customer;
+    const clients = Array.isArray(rawClients) ? rawClients : [rawClients];
 
     const now = new Date();
-    const sevenDaysAgo = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const sevenDaysAgo = new Date(now);
     sevenDaysAgo.setDate(now.getDate() - 7);
 
     const totalClients = clients.length;
-    const activeClients = clients.filter((c) => c.active === '1').length;
-    const newClients = clients.filter((c) => {
-      const dateAdd = new Date(c.date_add);
-      return dateAdd > sevenDaysAgo;
+
+    const clientsThisYear = clients.filter((c) => {
+      const date = new Date(c.date_add);
+      return date >= startOfYear;
     }).length;
+
+    const clientsThisWeek = clients.filter((c) => {
+      const date = new Date(c.date_add);
+      return date >= sevenDaysAgo;
+    }).length;
+
+    const genderCounts = {
+      homme: 0,
+      femme: 0,
+      inconnu: 0,
+    };
+
+    clients.forEach((c) => {
+      if (c.id_gender === '1') genderCounts.homme += 1;
+      else if (c.id_gender === '2') genderCounts.femme += 1;
+      else genderCounts.inconnu += 1;
+    });
 
     const result = [
       { label: 'Clients totaux', count: totalClients },
-      { label: 'Clients actifs', count: activeClients },
-      { label: 'Nouveaux cette semaine', count: newClients },
+      { label: 'Clients cette année', count: clientsThisYear },
+      { label: 'Clients cette semaine', count: clientsThisWeek },
+      { label: 'Hommes', count: genderCounts.homme },
+      { label: 'Femmes', count: genderCounts.femme },
+      { label: 'Sexe inconnu', count: genderCounts.inconnu },
     ];
 
     return res.status(200).json(result);

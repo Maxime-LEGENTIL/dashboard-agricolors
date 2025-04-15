@@ -8,6 +8,10 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
 } from 'recharts';
 
 export default function DashboardClients() {
@@ -17,7 +21,7 @@ export default function DashboardClients() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
   useEffect(() => {
-    fetch('/api/clients') // ⬅️ adapte ce chemin à ton API réelle
+    fetch('/api/clients')
       .then((res) => {
         if (!res.ok) throw new Error('Erreur lors du chargement des stats clients.');
         return res.json();
@@ -29,6 +33,33 @@ export default function DashboardClients() {
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
+
+  const COLORS = ['#3b82f6', '#10b981', '#f43f5e'];
+
+  const timeStats = stats.filter((s) =>
+    ['Clients cette année', 'Clients cette semaine'].includes(s.label)
+  );
+
+  const genderStats = stats.filter((s) =>
+    ['Hommes', 'Femmes', 'Sexe inconnu'].includes(s.label)
+  );
+
+  const totalStat = stats.find((s) => s.label === 'Clients totaux');
+
+  // 🛠 Tooltip custom
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-zinc-800 text-white text-sm rounded-lg px-4 py-2 shadow-lg border border-zinc-700">
+          <p className="font-semibold">{label}</p>
+          <p>
+            <span className="text-zinc-400">Nombre :</span> {payload[0].value}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="p-6 sm:p-10 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-5xl mx-auto mt-5">
@@ -55,19 +86,57 @@ export default function DashboardClients() {
         </div>
       )}
 
-      {!loading && !error && stats.length > 0 && (
+      {!loading && !error && (
         <>
-          <div className="mb-10 h-[400px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats}>
+          {/* Graphique : Inscriptions récentes */}
+          <div className="mb-10">
+            <h2 className="text-lg font-semibold text-zinc-700 dark:text-white mb-2">
+              Inscriptions récentes
+            </h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={timeStats}>
                 <XAxis dataKey="label" />
                 <YAxis />
-                <Tooltip />
-                <Bar dataKey="count" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar
+                  dataKey="count"
+                  fill="#3b82f6"
+                  radius={[8, 8, 0, 0]}
+                  label={{ fill: '#ffffff', fontSize: 12 }}
+                  animationDuration={600}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
+          {/* Graphique : Répartition par sexe */}
+          <div className="mb-10">
+            <h2 className="text-lg font-semibold text-zinc-700 dark:text-white mb-2">
+              Répartition par sexe
+            </h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={genderStats}
+                  dataKey="count"
+                  nameKey="label"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={90}
+                  label
+                  animationDuration={800}
+                >
+                  {genderStats.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+                <Legend verticalAlign="bottom" height={36} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Tableau complet */}
           <div className="overflow-x-auto mt-6">
             <table className="w-full text-left border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden text-sm">
               <thead className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
@@ -77,15 +146,23 @@ export default function DashboardClients() {
                 </tr>
               </thead>
               <tbody className="text-zinc-700 dark:text-zinc-200">
-                {stats.map((item, index) => (
-                  <tr
-                    key={index}
-                    className="even:bg-zinc-50 dark:even:bg-zinc-800"
-                  >
-                    <td className="px-4 py-3">{item.label}</td>
-                    <td className="px-4 py-3 font-semibold">{item.count}</td>
+                {totalStat && (
+                  <tr className="even:bg-zinc-50 dark:even:bg-zinc-800">
+                    <td className="px-4 py-3 font-medium">Clients totaux</td>
+                    <td className="px-4 py-3 font-semibold">{totalStat.count}</td>
                   </tr>
-                ))}
+                )}
+                {stats
+                  .filter((s) => s.label !== 'Clients totaux')
+                  .map((item, index) => (
+                    <tr
+                      key={index}
+                      className="even:bg-zinc-50 dark:even:bg-zinc-800"
+                    >
+                      <td className="px-4 py-3">{item.label}</td>
+                      <td className="px-4 py-3 font-semibold">{item.count}</td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>

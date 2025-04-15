@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   }
 
   const apiKey = process.env.PRESTA_API_KEY!;
-  const url = 'https://www.agricolors.fr/api/orders?display=[id,current_state,date_add]';
+  const url = 'https://www.agricolors.fr/api/orders?display=[id,total_paid,date_add]';
 
   try {
     const response = await fetch(url, {
@@ -19,35 +19,49 @@ export default async function handler(req, res) {
     const xml = await response.text();
     const json = await parseStringPromise(xml, { explicitArray: false });
 
-    const orders = Array.isArray(json.prestashop.orders.order)
-      ? json.prestashop.orders.order
-      : [json.prestashop.orders.order];
+    const rawOrders = json.prestashop.orders.order;
+    const orders = Array.isArray(rawOrders) ? rawOrders : [rawOrders];
 
     const now = new Date();
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(now.getDate() - 30);
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(now.getDate() - 7);
 
-    const totalOrders = orders.length;
+    // Formatage
+    const allOrders = orders.map((o) => ({
+      date: new Date(o.date_add),
+      total: parseFloat(o.total_paid),
+    }));
 
-    // ⚠️ current_state est un ID de statut (ex : 3 = livrée, 5 = annulée, etc.)
-    const delivered = orders.filter((o) => o.current_state === '5').length;
-    const canceled = orders.filter((o) => o.current_state === '6').length;
-    const pending = orders.filter((o) => o.current_state === '1').length;
+    const ordersThisYear = allOrders.filter((o) => o.date >= startOfYear);
+    const ordersThisWeek = allOrders.filter((o) => o.date >= sevenDaysAgo);
 
-    const recentOrders = orders.filter((o) => {
-      const createdAt = new Date(o.date_add);
-      return createdAt > thirtyDaysAgo;
-    }).length;
+    // Moyennes
+    const avg = (arr) =>
+      arr.length ? (arr.reduce((sum, o) => sum + o.total, 0) / arr.length).toFixed(2) : '0.00';
 
-    const result = [
-      { label: 'Commandes totales', count: totalOrders },
-      { label: 'Commandes en attente', count: pending },
-      { label: 'Commandes livrées', count: delivered },
-      { label: 'Commandes annulées', count: canceled },
-      { label: 'Commandes 30 derniers jours', count: recentOrders },
+    const stats = [
+      { label: 'Commandes totales', count: allOrders.length },
+      { label: 'Commandes cette année', count: ordersThisYear.length },
+      { label: 'Commandes cette semaine', count: ordersThisWeek.length },
+      { label: 'Panier moyen (global)', count: avg(allOrders) + ' €' },
+      { label: 'Panier moyen (année)', count: avg(ordersThisYear) + ' €' },
+      { label: 'Panier moyen (semaine)', count: avg(ordersThisWeek) + ' €' },
     ];
 
-    return res.status(200).json(result);
+    // Évolution quotidienne
+    const evolutionMap = {};
+    allOrders.forEach((o) => {
+      const dateStr = o.date.toISOString().split('T')[0];
+      if (!evolutionMap[dateStr]) evolutionMap[dateStr] = 0;
+      evolutionMap[dateStr]++;
+    });
+
+    const evolution = Object.entries(evolutionMap)
+      .sort((a, b) => new Date(a[0]) - new Date(b[0]))
+      .map(([date, count]) => ({ date, count }));
+
+    return res.status(200).json({ stats, evolution });
   } catch (err: any) {
     return res.status(500).json({
       error: 'Erreur API ou parsing XML',
