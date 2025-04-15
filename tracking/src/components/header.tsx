@@ -1,5 +1,5 @@
-// tracking/src/components/Header.tsx
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Header() {
   return (
@@ -12,11 +12,15 @@ export default function Header() {
       {/* Header principal */}
       <header className="text-white p-4 shadow-md" style={{ backgroundColor: "#4A4A49" }}>
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-bold">Agricolors.fr</h1>
-          <nav className="space-x-4">
-            <Link href="/">Accueil</Link>
-            <Link href="/dashboard">Dashboard</Link>
-          </nav>
+          <Link href="/">
+            <Image
+              src="/logo-agricolors.jpg" // 📁 place ce fichier dans public/logo-agricolors.jpg
+              alt="Logo Agricolors"
+              width={140}
+              height={50}
+              priority
+            />
+          </Link>
         </div>
       </header>
     </>

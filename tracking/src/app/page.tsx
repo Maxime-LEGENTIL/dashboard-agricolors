@@ -26,22 +26,22 @@ export default function Home() {
       bg: 'bg-yellow-100 dark:bg-yellow-900',
     },
     {
-      title: 'Stats produits',
+      title: 'Stats produits (soon)',
       icon: <LucideBox size={28} />,
-      path: '/dashboard/produits',
+      path: '#',
       bg: 'bg-purple-100 dark:bg-purple-900',
     },
     {
-      title: 'Stats ventes',
+      title: 'Stats ventes (soon)',
       icon: <LucideEuro size={28} />,
-      path: '/dashboard/ventes',
+      path: '#',
       bg: 'bg-red-100 dark:bg-red-900',
     },
   ];
 
   return (
     <div className="min-h-screen px-6 sm:px-10 py-10 bg-white dark:bg-zinc-900">
-      <h1 className="text-3xl font-bold text-zinc-800 dark:text-white mb-8">📈 Tableau de bord PrestaShop</h1>
+      <h1 className="text-3xl font-bold text-zinc-800 dark:text-white mb-8">Tableau de bord Agricolors.fr</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {cards.map((card, index) => (
           <div
